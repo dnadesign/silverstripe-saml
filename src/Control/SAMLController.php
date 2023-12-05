@@ -170,9 +170,12 @@ class SAMLController extends Controller
         // Write a rudimentary member with basic fields on every login, so that we at least have something
         // if there is no further sync (e.g. via LDAP)
         $member = Member::get()->filter('GUID', $guid)->limit(1)->first();
-        $insecure = Config::inst()->get(SAMLConfiguration::class, 'allow_insecure_email_linking');
 
-        if (!($member && $member->exists()) && $insecure && isset($fieldToClaimMap['Email'])) {
+        if (
+            !($member && $member->exists())
+            && Config::inst()->get(SAMLConfiguration::class, 'allow_insecure_email_linking')
+            && isset($fieldToClaimMap['Email'])
+        ) {
             // If there is no member found via GUID and we allow linking via email, search by email
             $att = $attributes[$fieldToClaimMap['Email']];
             $member = Member::get()->filter('Email', $att)->limit(1)->first();
@@ -256,14 +259,18 @@ class SAMLController extends Controller
     protected function getRedirect()
     {
         // Absolute redirection URLs may cause spoofing
-        $back = $this->getRequest()->getSession()->get('BackURL');
-
-        if ($back && Director::is_site_url($back)) {
+        if (
+            $this->getRequest()->getSession()->get('BackURL')
+            && Director::is_site_url($this->getRequest()->getSession()->get('BackURL'))
+        ) {
             return $this->redirect($this->getRequest()->getSession()->get('BackURL'));
         }
 
         // Spoofing attack, redirect to homepage instead of spoofing url
-        if ($back && !Director::is_site_url($back)) {
+        if (
+            $this->getRequest()->getSession()->get('BackURL')
+            && !Director::is_site_url($this->getRequest()->getSession()->get('BackURL'))
+        ) {
             return $this->redirect(Director::absoluteBaseURL());
         }
 
